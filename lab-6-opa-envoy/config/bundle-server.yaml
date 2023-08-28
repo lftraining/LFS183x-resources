@@ -1,0 +1,65 @@
+# bundle-server.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bundle-server
+  labels:
+    app: bundle-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bundle-server
+  template:
+    metadata:
+      labels:
+        app: bundle-server
+    spec:
+      initContainers:
+        - name: opa-builder
+          image: openpolicyagent/opa:latest
+          args:
+            - "build"
+            - "--bundle"
+            - "/opt/policy/"
+            - "--output"
+            - "/opt/output/bundle.tar.gz"
+          volumeMounts:
+            - name: index
+              mountPath: /opt/output/
+            - name: policy
+              mountPath: /opt/policy/authz
+            - name: data-bundle
+              mountPath: /opt/policy/user_data/data.json
+              subPath: data.json
+      containers:
+        - name: bundle-server
+          image: nginx:1.25
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: index
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: index
+          emptyDir: {}
+        - name: policy
+          configMap:
+            name: authz-policy
+        - name: data-bundle
+          configMap:
+            name: data-bundle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bundle-server
+spec:
+  selector:
+    app: bundle-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http

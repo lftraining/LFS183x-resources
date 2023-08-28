@@ -1,0 +1,94 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: employee-records
+  labels:
+    app: employee-records
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: employee-records
+  template:
+    metadata:
+      labels:
+        app: employee-records
+    spec:
+      initContainers:
+        - name: proxy-init
+          image: openpolicyagent/proxy_init:v8
+          # Configure the iptables bootstrap script to redirect traffic to the
+          # Envoy proxy on port 8000. Envoy will be running as 1111, and port
+          # 8282 will be excluded to support OPA health checks.
+          args: ["-p", "8000", "-u", "1111", "-w", "8282"]
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+            runAsNonRoot: false
+            runAsUser: 0
+      containers:
+        - name: app
+          image: employee-records:v0.1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "host=postgres user=postgres password=postgres dbname=postgres sslmode=disable"
+        - name: envoy
+          image: envoyproxy/envoy:v1.26.3
+          volumeMounts:
+            - readOnly: true
+              mountPath: /config
+              name: proxy-config
+          args:
+            - "envoy"
+            - "--config-path"
+            - "/config/envoy.yaml"
+          env:
+            - name: ENVOY_UID
+              value: "1111"
+        - name: opa
+          image: openpolicyagent/opa:latest-envoy
+          args:
+            - "run"
+            - "--server"
+            - "--addr=localhost:8181"
+            - "--diagnostic-addr=0.0.0.0:8282"
+            - "--set=services.default.url=http://bundle-server"
+            - "--set=bundles.default.resource=bundle.tar.gz"
+            - "--set=plugins.envoy_ext_authz_grpc.addr=:9191"
+            - "--set=plugins.envoy_ext_authz_grpc.path=envoy/authz/allow"
+            - "--set=decision_logs.console=true"
+            - "--set=status.console=true"
+            - "--ignore=.*"
+          livenessProbe:
+            httpGet:
+              path: /health?plugins
+              scheme: HTTP
+              port: 8282
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health?plugins
+              scheme: HTTP
+              port: 8282
+            initialDelaySeconds: 1
+            periodSeconds: 3
+      volumes:
+        - name: proxy-config
+          configMap:
+            name: proxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-records
+spec:
+  selector:
+    app: employee-records
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080

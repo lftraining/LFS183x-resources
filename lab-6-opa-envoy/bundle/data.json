@@ -1,0 +1,24 @@
+{
+    "users": {
+        "alice": {
+            "employee_id": 1,
+            "reportees": []
+        },
+        "bob": {
+            "employee_id": 2,
+            "reportees": ["charlie", "eve"]
+        },
+        "charlie": {
+            "employee_id": 3,
+            "reportees": ["dan"]
+        },
+        "dan": {
+            "employee_id": 4,
+            "reportees": []
+        },
+        "eve": {
+            "employee_id": 5,
+            "reportees": []
+        }
+    }
+}        
