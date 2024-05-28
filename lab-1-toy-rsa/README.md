@@ -12,7 +12,7 @@ Asymmetric encryption is achieved by algorithms which are easy to compute in one
 
 - Encryption: a person or process with access to a third party's public key can encrypt data, which can only be decrypted by an entity in possession of the corresponding private key;
 - Digital Signatures: any person or process with access to the private key can create a digital signature (using an appropriate hashing algorithm in combination with asymmetric cryptography), which can be verified by a process with access to the public key;
-- Key Exchange: two parties could use an algorithm such as the Diffie-Hellman key exchange scheme to agree on a shared secret by separately performing an offline computation involving their private key, and an authentic copy of the other party's private key.
+- Key Exchange: two parties could use an algorithm such as the Diffie-Hellman key exchange scheme to agree on a shared secret by separately performing an offline computation involving their private key, and an authentic copy of the other party's public key.
 
 RSA is based on the principle that if we take two large, prime integers `p` and `q` and multiply them to form a 'modulus' `n`, the multiplication operation is computationally easy, but factoring `n` to recover `p` and `q` is computationally infeasible given the amount of computing power / time it would take. The modulus `n` is used by both the public and private keys and provides the link between them. The length of `n` in bits is the 'key length'.
 
